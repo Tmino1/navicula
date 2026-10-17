@@ -1187,12 +1187,14 @@ impl ZellijPlugin for State {
                 self.timer_ticks = self.timer_ticks.wrapping_add(1);
                 self.animation_frame = self.animation_frame.wrapping_add(1);
                 // SessionUpdate is not consistently emitted for changes made
-                // by other Zellij servers, so reconcile against the CLI every
-                // half second. Git polling is heavier, but two seconds keeps
-                // branch and file-state feedback feeling current without
-                // running a process on every animation frame.
+                // by other Zellij servers, and host-folder notifications can
+                // miss changes made outside this Zellij server. Reconcile
+                // both every half second. Git polling is heavier, but two
+                // seconds keeps branch and file-state feedback feeling current
+                // without running a process on every animation frame.
                 if self.timer_ticks % 2 == 0 {
                     self.refresh_sessions();
+                    scan_host_folder(&"/host");
                 }
                 if self.timer_ticks % 8 == 0 {
                     self.refresh_git();

@@ -14,10 +14,10 @@ The custom `zellij-rail` plugin provides three connected views:
 - a file browser that follows the focused pane's working directory and shows
   repository branch and file status.
 
-File-system, pane, tab, command, and working-directory changes are event driven.
-The rail also reconciles cross-server sessions every 500 ms and Git state every
-2 seconds, since Zellij cannot emit all of those changes across server
-boundaries.
+Pane, tab, command, and working-directory changes are event driven. The rail
+also rescans the current directory and reconciles cross-server sessions every
+500 ms, while Git state refreshes every 2 seconds. These fallback polls cover
+changes made outside the current Zellij server.
 
 Focus the rail with `Alt+r`. Navigate with the arrow keys or `j`/`k`, open the
 selected row with `Enter` or `l`, move to the parent directory with `h`, and
