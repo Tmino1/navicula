@@ -28,14 +28,13 @@ $pixi\
 [](fg:color_bg3 bg:color_bg1)\
 $time\
 [ ](fg:color_bg1)\
-$line_break$character"""
-
-right_format = """
+$fill\
 [](fg:color_bg3)\
 [ 󱎫 ](fg:color_blue bg:color_bg3)\
 [](fg:color_bg1 bg:color_bg3)\
 $cmd_duration\
-[](fg:color_bg1)"""
+[](fg:color_bg1)\
+$line_break$character"""
 
 palette = 'gruvbox_light_soft'
 
@@ -188,6 +187,9 @@ min_time = 500
 show_milliseconds = false
 style = "fg:color_fg0 bg:color_bg1"
 format = '[ $duration ]($style)'
+
+[fill]
+symbol = ' '
 
 [line_break]
 disabled = false
