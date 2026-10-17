@@ -1,0 +1,10 @@
+layout {
+    tab name="navicula" {
+        pane split_direction="vertical" {
+            pane
+            pane size=32 name="rail" {
+                plugin location="file:@rail@"
+            }
+        }
+    }
+}

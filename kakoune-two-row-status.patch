@@ -1,0 +1,77 @@
+diff --git a/src/terminal_ui.cc b/src/terminal_ui.cc
+index 2f61c11..af2a610 100644
+--- a/src/terminal_ui.cc
++++ b/src/terminal_ui.cc
+@@ -545,7 +545,7 @@ void TerminalUI::redraw(bool force)
+         format_with(writer, "\033[{};{}H", (int)c.line + 1, (int)c.column + 1);
+     };
+     if (m_status_cursor_pos > 0)
+-        set_cursor_pos({m_status_on_top ? 0 : m_dimensions.line, m_status_cursor_pos});
++        set_cursor_pos({m_status_on_top ? 1_line : m_dimensions.line + 1, m_status_cursor_pos});
+     else
+         set_cursor_pos(m_cursor_pos + content_line_offset());
+ }
+@@ -592,7 +592,8 @@ void TerminalUI::draw_status(const DisplayLine& prompt,
+                              const Face& default_face,
+                              StatusStyle)
+ {
+-    const LineCount status_line_pos = m_status_on_top ? 0 : m_dimensions.line;
++    const LineCount modeline_pos = m_status_on_top ? 0_line : m_dimensions.line;
++    const LineCount prompt_pos = m_status_on_top ? 1_line : m_dimensions.line + 1;
+
+     auto status_width = m_dimensions.column - prompt.length();
+     if (cursor_pos < m_status_pos)
+@@ -604,27 +605,18 @@ void TerminalUI::draw_status(const DisplayLine& prompt,
+
+     auto trimmed_content = content;
+     trimmed_content.trim(m_status_pos, status_width);
+-    m_window.draw(status_line_pos, prompt.atoms(), default_face);
+-    m_window.draw(DisplayCoord{status_line_pos, prompt.length()}, trimmed_content.atoms(), default_face);
++
++    // Kakoune normally multiplexes the prompt and modeline onto one terminal
++    // row. Keep the modeline persistent and give commands, searches and
++    // messages their own row directly below it.
++    DisplayLine blank{String{' ', CharCount{(int)m_dimensions.column}}, default_face};
++    m_window.draw(modeline_pos, blank.atoms(), default_face);
++    m_window.draw(prompt_pos, blank.atoms(), default_face);
++    m_window.draw(modeline_pos, mode_line.atoms(), default_face);
++    m_window.draw(prompt_pos, prompt.atoms(), default_face);
++    m_window.draw(DisplayCoord{prompt_pos, prompt.length()}, trimmed_content.atoms(), default_face);
+
+-    const auto mode_len = mode_line.length();
+     m_status_len = prompt.length() + trimmed_content.length();
+-    const auto remaining = m_dimensions.column - m_status_len;
+-    if (mode_len < remaining)
+-    {
+-        ColumnCount col = m_dimensions.column - mode_len;
+-        m_window.draw({status_line_pos, col}, mode_line.atoms(), default_face);
+-    }
+-    else if (remaining > 2)
+-    {
+-        DisplayLine trimmed_mode_line = mode_line;
+-        trimmed_mode_line.trim(mode_len + 2 - remaining, remaining - 2);
+-        trimmed_mode_line.insert(trimmed_mode_line.begin(), { "…", {} });
+-        kak_assert(trimmed_mode_line.length() == remaining - 1);
+-
+-        ColumnCount col = m_dimensions.column - remaining + 1;
+-        m_window.draw({status_line_pos, col}, trimmed_mode_line.atoms(), default_face);
+-    }
+
+     if (m_set_title)
+     {
+@@ -675,7 +667,7 @@ void TerminalUI::check_resize(bool force)
+     m_screen.hashes.reset(new size_t[(int)terminal_size.line]{});
+     kak_assert(m_window);
+
+-    m_dimensions = terminal_size - 1_line;
++    m_dimensions = terminal_size - 2_line;
+
+     // if (char* csr = tigetstr((char*)"csr"))
+     //     putp(tparm(csr, 0, ws.ws_row));
+@@ -1494,7 +1486,7 @@ DisplayCoord TerminalUI::dimensions()
+
+ LineCount TerminalUI::content_line_offset() const
+ {
+-    return m_status_on_top ? 1 : 0;
++    return m_status_on_top ? 2 : 0;
+ }

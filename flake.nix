@@ -1,36 +1,53 @@
 {
-  description = "N^7 portable terminal setup (zsh + oh-my-posh + zellij + wezterm + CLI toolbelt)";
+  description = "Navicula — an integrated terminal workspace for Zellij";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
-    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    yummy-kak = {
+      url = "github:Hjagu09/yummy.kak";
+      flake = false;
+    };
+    lazy-zellij = {
+      url = "github:Logos-Flux/lazy-zellij";
+      flake = false;
+    };
+    iris = {
+      url = "github:versenilvis/iris/main";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { nixpkgs, nixpkgs-unstable, home-manager, ... }:
-  let
-    # x86_64-darwin (Intel Mac) intentionally omitted: nixpkgs-unstable has
-    # dropped support for it, so importing it fails outright on that system.
-    # aarch64-darwin (Apple Silicon) covers every Mac sold since late 2020.
-    systems = [ "x86_64-linux" "aarch64-linux" "aarch64-darwin" ];
+  outputs = inputs@{ self, nixpkgs, home-manager, ... }:
+    let
+      system = "x86_64-linux";
+      pkgs = import nixpkgs { inherit system; };
+      naviculaPackages = import ./packages { inherit pkgs inputs; };
+    in
+    {
+      homeManagerModules.default = import ./modules/home-manager { inherit self inputs; };
 
-    mkHome = system: home-manager.lib.homeManagerConfiguration {
-      pkgs = import nixpkgs {
-        inherit system;
-        config.allowUnfree = true;
+      packages.${system} = {
+        inherit (naviculaPackages)
+          navicula zellij-rail lazy-zellij kakoune typst-terminal-preview;
+        default = naviculaPackages.navicula;
       };
-      extraSpecialArgs = {
-        unstable = import nixpkgs-unstable {
-          inherit system;
-          config.allowUnfree = true;
-        };
+
+      apps.${system}.default = {
+        type = "app";
+        program = "${naviculaPackages.navicula}/bin/navicula";
+        meta.description = "Launch a Navicula terminal workspace";
       };
-      modules = [ ./home.nix ];
+
+      checks.${system}.home-manager =
+        (home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [ self.homeManagerModules.default ./tests/home.nix ];
+        }).activationPackage;
+
+      formatter.${system} = pkgs.nixfmt-tree;
     };
-  in {
-    homeConfigurations = nixpkgs.lib.genAttrs systems mkHome;
-  };
 }

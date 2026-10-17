@@ -1,0 +1,41 @@
+diff --git a/bin/lzj b/bin/lzj
+index a39e6f2..db66f04 100755
+--- a/bin/lzj
++++ b/bin/lzj
+@@ -315,11 +315,15 @@ prompt_new() {
+     echo "created detached session: $n" >&2
+ }
+
+-confirm_kill() {
++confirm_remove() {
+     local n=$1
+-    read -rp "kill session '$n'? [y/N] " a
++    read -rp "remove session '$n' completely? [y/N] " a
+     [[ "$a" =~ ^[Yy]$ ]] || return 0
++    # One action owns the whole lifecycle: disable an optional autostart unit,
++    # stop a live session, then forget its serialized/resurrectable state.
++    systemctl --user disable --now "zellij@${n}.service" >/dev/null 2>&1 || true
+     "$ZELLIJ" kill-session "$n" 2>&1 || true
++    "$ZELLIJ" delete-session "$n" --force 2>&1 || true
+ }
+
+ confirm_delete() {
+@@ -341,7 +345,7 @@ snapshot_now() {
+ case "${1:-}" in
+     --_list)       list_rows; exit 0 ;;
+     --_preview)    shift; preview_row "$*"; exit 0 ;;
+     --_new)        prompt_new; exit 0 ;;
+-    --_kill)       confirm_kill "$2"; exit 0 ;;
++    --_kill)       confirm_remove "$2"; exit 0 ;;
+     --_delete)     confirm_delete "$2"; exit 0 ;;
+     --_up)         systemd_up "$2"; exit 0 ;;
+     --_down)       systemd_down "$2"; exit 0 ;;
+@@ -447,7 +451,7 @@ EOF
+ esac
+
+ # ── main: launch picker ───────────────────────────────────────────────────────────────────────────────
+-HEADER=$'enter:attach  ^n:new  ^l:layout  ^d:kill  ^x:delete  ^u:systemd-up  ⎇u:systemd-down  ^p:snap  ^r:reload'
++HEADER=$'enter:attach  ^n:new  ^l:layout  ^d:remove  ^x:delete  ^u:systemd-up  ⎇u:systemd-down  ^p:snap  ^r:reload'
+
+ # fzf will print the selected row on stdout; we then attach to it.
+ selected=$(
